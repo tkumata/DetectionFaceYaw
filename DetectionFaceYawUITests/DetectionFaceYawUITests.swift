@@ -1,10 +1,3 @@
-//
-//  DetectionFaceYawUITests.swift
-//  DetectionFaceYawUITests
-//
-//  Created by Tomokatsu Kumata on 2025/06/20.
-//
-
 import XCTest
 
 final class DetectionFaceYawUITests: XCTestCase {

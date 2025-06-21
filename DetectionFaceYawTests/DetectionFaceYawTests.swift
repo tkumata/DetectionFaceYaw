@@ -1,10 +1,3 @@
-//
-//  DetectionFaceYawTests.swift
-//  DetectionFaceYawTests
-//
-//  Created by Tomokatsu Kumata on 2025/06/20.
-//
-
 import Testing
 @testable import DetectionFaceYaw
 
