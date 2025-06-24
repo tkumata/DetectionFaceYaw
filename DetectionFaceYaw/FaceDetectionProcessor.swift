@@ -95,7 +95,6 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
             }
         }
 
-        // orientation は常に .right (縦向きで使用)
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right)
         try? handler.perform([request])
     }
