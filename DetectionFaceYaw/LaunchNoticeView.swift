@@ -7,11 +7,36 @@ struct LaunchNoticeView: View {
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("⚠️ 本アプリは、iPhone / iPad のカメラを利用して、人の顔が正面か、それ以外かを検知します。\n⚠️ そのため、うつ伏せかどうかを正確に確認できるわけではありませんのでご注意ください。\n⚠️ 顔認識の精度は Vision フレームワークに依存するため、使用環境や光の状況によって変動する可能性があります。")
-                .padding()
+            Text("⚠️ 注意事項")
+                .font(.headline)
+            
+            VStack(alignment: .leading, spacing: 10) {
+                Text("• 本アプリは、AIによる人体検出と顔の3D姿勢推定を組み合わせて、うつ伏せ寝のリスクを数値化します。")
+                Text("• あくまで補助ツールであり、医療機器ではありません。必ず目視での確認を併用してください。")
+                Text("• 部屋の明るさや寝具の種類により、検出精度が変動する可能性があります。")
+                Text("• 映像データは端末内で即時処理され、保存・送信されることはありません。")
+            }
+            .font(.subheadline)
+            .padding()
 
-            Text("ℹ️ 顔が正面の場合は、緑色の枠で、それ以外の場合は赤色の枠が顔部分を囲みます。\nℹ️ 本アプリは、ファインダに映るものをどこにも保存しません。\nℹ️ 緑色の枠だから安心とは限らないので最終的にご確認ください。")
-                .padding()
+            VStack(alignment: .leading, spacing: 10) {
+                Text("ℹ️ 表示の意味")
+                    .font(.headline)
+                HStack {
+                    Circle().fill(Color.green).frame(width: 15, height: 15)
+                    Text("SAFE: 仰向け（安心）")
+                }
+                HStack {
+                    Circle().fill(Color.yellow).frame(width: 15, height: 15)
+                    Text("CAUTION: 傾き・横向き（注意）")
+                }
+                HStack {
+                    Circle().fill(Color.red).frame(width: 15, height: 15)
+                    Text("DANGER: うつ伏せ・顔隠れ（危険）")
+                }
+            }
+            .font(.subheadline)
+            .padding()
 
             Toggle("この画面を次回から表示しない", isOn: $isChecked)
                 .padding()
@@ -23,6 +48,7 @@ struct LaunchNoticeView: View {
                 agreed = true
             }
             .buttonStyle(.borderedProminent)
+            .padding()
         }
         .fullScreenCover(isPresented: $agreed) {
             FaceDetectionView()
