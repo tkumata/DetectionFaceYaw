@@ -12,7 +12,10 @@ struct CameraPreviewView: UIViewRepresentable {
     }
 
     func updateUIView(_ uiView: UIView, context: Context) {
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
         previewLayer.frame = uiView.bounds
+        CATransaction.commit()
     }
 
     class PreviewHostingView: UIView {
