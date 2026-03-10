@@ -35,6 +35,14 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
     private let session = AVCaptureSession()
     private let queue = DispatchQueue(label: "videoQueue", qos: .userInteractive)
     
+    // Vision リクエストをプロパティとして保持（再利用によるパフォーマンス向上）
+    private let humanRequest = VNDetectHumanRectanglesRequest()
+    private let faceRequest: VNDetectFaceLandmarksRequest = {
+        let request = VNDetectFaceLandmarksRequest()
+        request.revision = VNDetectFaceLandmarksRequestRevision3
+        return request
+    }()
+
     // 定量的評価のための定数
     private let safeThreshold = 0.15
     private let cautionThreshold = 0.40
@@ -59,7 +67,7 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
 
             if let connection = output.connection(with: .video) {
                 if #available(iOS 17.0, *) {
-                    connection.videoRotationAngle = 0 // Portrait
+                    connection.videoRotationAngle = 90 // Portrait (Right side up)
                 } else {
                     connection.videoOrientation = .portrait
                 }
@@ -67,10 +75,6 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
 
             self.previewLayer.session = self.session
             self.previewLayer.videoGravity = .resizeAspectFill
-
-            DispatchQueue.main.async {
-                self.previewLayer.frame = UIScreen.main.bounds
-            }
 
             self.session.commitConfiguration()
             self.session.startRunning()
@@ -80,13 +84,7 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else { return }
 
-        // 1. 人体検出リクエスト (Revision 1 で十分)
-        let humanRequest = VNDetectHumanRectanglesRequest()
-        
-        // 2. 顔検出リクエスト (Revision 3 で Pitch を取得)
-        let faceRequest = VNDetectFaceLandmarksRequest()
-        faceRequest.revision = VNDetectFaceLandmarksRequestRevision3
-
+        // Vision リクエストの実行（再利用されたリクエストを使用）
         let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, orientation: .right)
         
         do {
@@ -102,16 +100,15 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
     }
 
     private func processResults(humans: [VNHumanObservation], faces: [VNFaceObservation]) {
-        let size = previewLayer.bounds.size
         var results: [DetectedPerson] = []
 
-        // 検出された「人」ごとに評価を行う
         for human in humans {
-            let humanBox = convertToLayerRect(human.boundingBox, size: size)
+            // 標準メソッドを使用して Vision の正規化座標をレイヤー座標に変換
+            let humanBox = previewLayer.layerRectConverted(fromMetadataOutputRect: human.boundingBox)
             
-            // この人体領域に含まれる顔を探す
+            // 人体領域に含まれる顔を検索
             let containedFace = faces.first { face in
-                let faceBox = convertToLayerRect(face.boundingBox, size: size)
+                let faceBox = previewLayer.layerRectConverted(fromMetadataOutputRect: face.boundingBox)
                 return humanBox.intersects(faceBox)
             }
 
@@ -125,7 +122,8 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
                 let pitch = face.pitch?.doubleValue ?? 0
                 let confidence = Double(face.confidence)
                 
-                let ffi = cos(yaw) * cos(pitch)
+                // 仕様書に基づき、FFIが負にならないようガード (max(0, ...))
+                let ffi = max(0, cos(yaw) * cos(pitch))
                 riskScore = 1.0 - (ffi * confidence)
                 hasFace = true
             } else {
@@ -154,13 +152,5 @@ class FaceDetectionProcessor: NSObject, ObservableObject, AVCaptureVideoDataOutp
         DispatchQueue.main.async {
             self.detectedPeople = results
         }
-    }
-
-    private func convertToLayerRect(_ boundingBox: CGRect, size: CGSize) -> CGRect {
-        let width = boundingBox.width * size.width
-        let height = boundingBox.height * size.height
-        let x = boundingBox.origin.x * size.width
-        let y = (1.0 - boundingBox.origin.y - boundingBox.height) * size.height
-        return CGRect(x: x, y: y, width: width, height: height)
     }
 }

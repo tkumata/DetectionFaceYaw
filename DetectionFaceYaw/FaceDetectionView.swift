@@ -16,7 +16,7 @@ struct FaceDetectionView: View {
                         .stroke(person.state.color, lineWidth: 3)
                         .frame(width: person.boundingBox.width, height: person.boundingBox.height)
                     
-                    // ステータスラベル
+                    // ステータスラベル (枠の内側に配置して画面外への突き抜けを防止)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("\(person.state.rawValue)")
                             .font(.caption.bold())
@@ -38,7 +38,7 @@ struct FaceDetectionView: View {
                                 .background(Color.white)
                         }
                     }
-                    .offset(y: -25)
+                    .padding(4)
                 }
                 .position(x: person.boundingBox.midX, y: person.boundingBox.midY)
             }
